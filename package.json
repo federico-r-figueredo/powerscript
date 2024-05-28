@@ -6,7 +6,8 @@
     "scripts": {
         "build": "tsc",
         "start": "tsc && node ./build/main.js ./main.ps",
-        "test": "jest --verbose --coverage"
+        "test": "jest --verbose --coverage",
+        "generate-ast": "tsc && node ./build/tool/generateAST.js ./src/ast"
     },
     "bin": {
         "powerscript": "src/main.ts"
