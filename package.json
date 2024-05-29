@@ -5,7 +5,7 @@
     "main": "index.js",
     "scripts": {
         "build": "tsc",
-        "start": "tsc && node ./build/main.js ./main.ps",
+        "start": "tsc && node ./build/main.js",
         "test": "jest --verbose --coverage",
         "generate-ast": "tsc && node ./build/tool/generateAST.js ./src/ast"
     },
