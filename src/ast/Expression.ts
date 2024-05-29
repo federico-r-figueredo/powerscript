@@ -4,30 +4,26 @@ import Token from './../Token';
 import LiteralValue from './../LiteralValue';
 
 export abstract class Expression {
-    abstract accept<T>(visitor: Visitor<T>): T;
+    abstract accept<T>(visitor: ExpressionVisitor<T>): T;
 }
 
-export interface Visitor<T> {
-    visitBinaryExpression(expression: Binary): T;
-    visitGroupingExpression(expression: Grouping): T;
-    visitLiteralExpression(expression: Literal): T;
-    visitUnaryExpression(expression: Unary): T;
+export interface ExpressionVisitor<T> {
+    visitBinaryExpression(expression: BinaryExpression): T;
+    visitGroupingExpression(expression: GroupingExpression): T;
+    visitLiteralExpression(expression: LiteralExpression): T;
+    visitUnaryExpression(expression: UnaryExpression): T;
 }
 
-export class Binary extends Expression {
+export class BinaryExpression extends Expression {
     private readonly _left: Expression;
     private readonly _operator: Token;
     private readonly _right: Expression;
 
-    constructor(
-        left: Expression,
-        operator: Token,
-        right: Expression,
-    ) {
+    constructor(left: Expression, operator: Token, right: Expression) {
         super();
-        this._left = left
-        this._operator = operator
-        this._right = right
+        this._left = left;
+        this._operator = operator;
+        this._right = right;
     }
 
     public get left(): Expression {
@@ -42,60 +38,53 @@ export class Binary extends Expression {
         return this._right;
     }
 
-    accept<T>(visitor: Visitor<T>): T {
+    accept<T>(visitor: ExpressionVisitor<T>): T {
         return visitor.visitBinaryExpression(this);
     }
 }
 
-export class Grouping extends Expression {
+export class GroupingExpression extends Expression {
     private readonly _expression: Expression;
 
-    constructor(
-        expression: Expression,
-    ) {
+    constructor(expression: Expression) {
         super();
-        this._expression = expression
+        this._expression = expression;
     }
 
     public get expression(): Expression {
         return this._expression;
     }
 
-    accept<T>(visitor: Visitor<T>): T {
+    accept<T>(visitor: ExpressionVisitor<T>): T {
         return visitor.visitGroupingExpression(this);
     }
 }
 
-export class Literal extends Expression {
+export class LiteralExpression extends Expression {
     private readonly _value: LiteralValue;
 
-    constructor(
-        value: LiteralValue,
-    ) {
+    constructor(value: LiteralValue) {
         super();
-        this._value = value
+        this._value = value;
     }
 
     public get value(): LiteralValue {
         return this._value;
     }
 
-    accept<T>(visitor: Visitor<T>): T {
+    accept<T>(visitor: ExpressionVisitor<T>): T {
         return visitor.visitLiteralExpression(this);
     }
 }
 
-export class Unary extends Expression {
+export class UnaryExpression extends Expression {
     private readonly _operator: Token;
     private readonly _right: Expression;
 
-    constructor(
-        operator: Token,
-        right: Expression,
-    ) {
+    constructor(operator: Token, right: Expression) {
         super();
-        this._operator = operator
-        this._right = right
+        this._operator = operator;
+        this._right = right;
     }
 
     public get operator(): Token {
@@ -106,7 +95,7 @@ export class Unary extends Expression {
         return this._right;
     }
 
-    accept<T>(visitor: Visitor<T>): T {
+    accept<T>(visitor: ExpressionVisitor<T>): T {
         return visitor.visitUnaryExpression(this);
     }
 }
