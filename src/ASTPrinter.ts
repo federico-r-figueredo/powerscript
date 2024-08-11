@@ -9,6 +9,10 @@ import {
 
 // Creates an unambiguous, if ugly, string representation of AST nodes
 export default class ASTPrinter implements ExpressionVisitor<string> {
+    print(expression: Expression): string {
+        return expression.accept(this);
+    }
+
     visitBinaryExpression(expression: BinaryExpression): string {
         return this.parenthesize(
             expression.operator.lexeme,

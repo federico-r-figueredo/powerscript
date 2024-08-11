@@ -1,11 +1,13 @@
 // This file is programmatically generated. Do not edit it directly.
 
-import Token from './../Token';
-import LiteralValue from './../LiteralValue';
+import Token from "./Token";
+import LiteralValue from "./LiteralValue";
 
 export abstract class Expression {
     abstract accept<T>(visitor: ExpressionVisitor<T>): T;
 }
+
+export default Expression
 
 export interface ExpressionVisitor<T> {
     visitBinaryExpression(expression: BinaryExpression): T;
@@ -19,11 +21,15 @@ export class BinaryExpression extends Expression {
     private readonly _operator: Token;
     private readonly _right: Expression;
 
-    constructor(left: Expression, operator: Token, right: Expression) {
+    constructor(
+        left: Expression,
+        operator: Token,
+        right: Expression,
+    ) {
         super();
-        this._left = left;
-        this._operator = operator;
-        this._right = right;
+        this._left = left
+        this._operator = operator
+        this._right = right
     }
 
     public get left(): Expression {
@@ -46,9 +52,11 @@ export class BinaryExpression extends Expression {
 export class GroupingExpression extends Expression {
     private readonly _expression: Expression;
 
-    constructor(expression: Expression) {
+    constructor(
+        expression: Expression,
+    ) {
         super();
-        this._expression = expression;
+        this._expression = expression
     }
 
     public get expression(): Expression {
@@ -63,9 +71,11 @@ export class GroupingExpression extends Expression {
 export class LiteralExpression extends Expression {
     private readonly _value: LiteralValue;
 
-    constructor(value: LiteralValue) {
+    constructor(
+        value: LiteralValue,
+    ) {
         super();
-        this._value = value;
+        this._value = value
     }
 
     public get value(): LiteralValue {
@@ -81,10 +91,13 @@ export class UnaryExpression extends Expression {
     private readonly _operator: Token;
     private readonly _right: Expression;
 
-    constructor(operator: Token, right: Expression) {
+    constructor(
+        operator: Token,
+        right: Expression,
+    ) {
         super();
-        this._operator = operator;
-        this._right = right;
+        this._operator = operator
+        this._right = right
     }
 
     public get operator(): Token {

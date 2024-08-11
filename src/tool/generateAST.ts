@@ -1,5 +1,14 @@
 import * as fs from 'fs';
 
+interface ClassDefinition {
+    baseName: string;
+    className: string;
+    fields: {
+        type: string;
+        name: string;
+    }[];
+}
+
 function main(args: string[]): void {
     if (args.length !== 1) {
         console.error('Usage: powerscript-generate-ast <output directory>');
@@ -14,60 +23,67 @@ function main(args: string[]): void {
         'Literal  : LiteralValue value',
         'Unary    : Token operator, Expression right'
     ]);
+
+    defineAST(outputDirectory, 'Statement', [
+        'Expression : Expression expression',
+        'Print      : Expression expression'
+    ]);
 }
 
 function defineAST(outputDirectory: string, baseName: string, types: string[]): void {
     const path = `${outputDirectory}/${baseName}.ts`;
 
+    const classDefinitions = types.map((type) => parseClassDefinition(baseName, type));
+
+    const importedTypes = new Set(
+        classDefinitions
+            .flatMap(({ fields }) => fields)
+            .map(({ type }) => type)
+            .filter((type) => type !== baseName)
+    );
+
     const lines = [
         '// This file is programmatically generated. Do not edit it directly.',
         '',
-        "import Token from './../Token';",
-        "import LiteralValue from './../LiteralValue';",
+        ...Array.from(importedTypes).map((type) => `import ${type} from "./${type}";`),
         '',
         `export abstract class ${baseName} {`,
         `    abstract accept<T>(visitor: ${baseName}Visitor<T>): T;`,
         '}',
         '',
-        ...defineVisitor(baseName, types),
+        `export default ${baseName}`,
         '',
-        ...types.flatMap((type: string) => {
-            const [classPrefix, fields] = type.split(':').map((s: string) => s.trim());
-            return defineType(baseName, classPrefix, fields);
-        })
+        ...defineVisitor(baseName, classDefinitions),
+        '',
+        ...classDefinitions.flatMap(defineType)
     ];
 
     fs.writeFileSync(path, lines.join('\n'));
 }
-function defineType(baseName: string, classPrefix: string, fieldList: string) {
-    const className = classPrefix + baseName;
-    const fields: string[][] = fieldList.split(', ').map((field) => field.split(' '));
 
+function defineType({ baseName, className, fields }: ClassDefinition) {
     console.log(className, fields);
 
     return [
         `export class ${className} extends ${baseName} {`,
 
         // Fields
-        ...fields.map(
-            ([fieldType, fieldName]) =>
-                `    private readonly _${fieldName}: ${fieldType};`
-        ),
+        ...fields.map(({ type, name }) => `    private readonly _${name}: ${type};`),
         '',
 
         // Constructor with all fields
         '    constructor(',
-        ...fields.map(([fieldType, fieldName]) => `        ${fieldName}: ${fieldType},`),
+        ...fields.map(({ type, name }) => `        ${name}: ${type},`),
         '    ) {',
         '        super();',
-        ...fields.map(([_, fieldName]) => `        this._${fieldName} = ${fieldName}`),
+        ...fields.map(({ name }) => `        this._${name} = ${name}`),
         '    }',
         '',
 
         // Getters
         ...fields.map(
-            ([fieldType, fieldName]) =>
-                `    public get ${fieldName}(): ${fieldType} {\n        return this._${fieldName};\n    }\n`
+            ({ type, name }) =>
+                `    public get ${name}(): ${type} {\n        return this._${name};\n    }\n`
         ),
 
         // Visitor pattern
@@ -79,17 +95,26 @@ function defineType(baseName: string, classPrefix: string, fieldList: string) {
         ''
     ];
 }
-function defineVisitor(baseName: string, types: string[]) {
+function defineVisitor(baseName: string, classDefinitions: ClassDefinition[]) {
     return [
         `export interface ${baseName}Visitor<T> {`,
-        ...types.map((type) => {
-            const classPrefix = type.split(':')[0].trim();
-            const className = classPrefix + baseName;
+        ...classDefinitions.map(({ className }) => {
             const method = `visit${className}`;
             return `    ${method}(${baseName.toLowerCase()}: ${className}): T;`;
         }),
         '}'
     ];
+}
+
+function parseClassDefinition(baseName: string, definition: string): ClassDefinition {
+    const [classPrefix, fieldList] = definition.split(':').map((x) => x.trim());
+    const className = classPrefix + baseName;
+    const fields = fieldList.split(', ').map((field) => {
+        const [type, name] = field.split(' ');
+        return { type, name };
+    });
+
+    return { baseName, className, fields };
 }
 
 main(process.argv.slice(2));

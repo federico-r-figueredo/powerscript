@@ -126,7 +126,10 @@ export default class Lexer {
                 this.line += 1;
                 break;
             case '"':
-                this.string();
+                this.string('"');
+                break;
+            case "'":
+                this.string("'");
                 break;
             default:
                 if (isDigit(char)) {
@@ -177,8 +180,8 @@ export default class Lexer {
         return this.source.charAt(this.current);
     }
 
-    string(): void {
-        while (this.peek() !== '"' && !this.isAtEnd()) {
+    string(variant: string): void {
+        while (this.peek() !== variant && !this.isAtEnd()) {
             if (this.peek() === '\n') this.line++;
             this.advance();
         }

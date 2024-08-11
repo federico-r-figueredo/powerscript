@@ -7,7 +7,7 @@
         "build": "tsc",
         "start": "tsc && node ./build/main.js",
         "test": "jest --verbose --coverage",
-        "generate-ast": "tsc && node ./build/tool/generateAST.js ./src/ast"
+        "generate-ast": "tsc && node ./build/tool/generateAST.js ./src/"
     },
     "bin": {
         "powerscript": "src/main.ts"
