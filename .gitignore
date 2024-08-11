@@ -4,3 +4,4 @@ build/
 coverage/
 web/js/
 web/css/
+*.log
