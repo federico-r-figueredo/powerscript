@@ -2,37 +2,40 @@ import Token from './Token';
 import TokenType from './TokenType';
 import ErrorHandler from './ErrorHandler';
 import LiteralValue from './LiteralValue';
+import PowerScript from './PowerScript';
 
 const keywords = new Map([
-    ['and', TokenType.And],
-    ['class', TokenType.Class],
-    ['else', TokenType.Else],
-    ['false', TokenType.False],
-    ['for', TokenType.For],
-    ['function', TokenType.Function],
-    ['if', TokenType.If],
-    ['null', TokenType.Null],
-    ['or', TokenType.Or],
-    ['return', TokenType.Return],
-    ['super', TokenType.Super],
-    ['this', TokenType.This],
-    ['true', TokenType.True],
-    ['let', TokenType.Let],
-    ['while', TokenType.While]
+    ['and', TokenType.AND],
+    ['class', TokenType.CLASS],
+    ['const', TokenType.CONST],
+    ['else', TokenType.ELSE],
+    ['false', TokenType.FALSE],
+    ['for', TokenType.FOR],
+    ['function', TokenType.FUNCTION],
+    ['if', TokenType.IF],
+    ['null', TokenType.NULL],
+    ['or', TokenType.OR],
+    ['print', TokenType.PRINT],
+    ['return', TokenType.RETURN],
+    ['super', TokenType.SUPER],
+    ['this', TokenType.THIS],
+    ['true', TokenType.TRUE],
+    ['let', TokenType.LET],
+    ['while', TokenType.WHILE]
 ]);
 
 export default class Lexer {
+    private readonly powerScript: PowerScript;
     private readonly source: string;
-    private error: ErrorHandler;
 
     private readonly tokens: Token[];
     private start: number;
     private current: number;
     private line: number;
 
-    constructor(source: string, error: ErrorHandler) {
+    constructor(powerScript: PowerScript, source: string) {
+        this.powerScript = powerScript;
         this.source = source;
-        this.error = error;
 
         this.tokens = [];
         this.start = 0;
@@ -59,50 +62,50 @@ export default class Lexer {
 
         switch (char) {
             case '(':
-                this.addToken(TokenType.LeftParenthesis);
+                this.addToken(TokenType.LEFT_PARENTHESIS);
                 break;
             case ')':
-                this.addToken(TokenType.RightParenthesis);
+                this.addToken(TokenType.RIGHT_PARENTHESIS);
                 break;
             case '{':
-                this.addToken(TokenType.LeftBrace);
+                this.addToken(TokenType.LEFT_BRACE);
                 break;
-            case '{':
-                this.addToken(TokenType.RightBrace);
+            case '}':
+                this.addToken(TokenType.RIGHT_BRACE);
                 break;
             case ',':
-                this.addToken(TokenType.Comma);
+                this.addToken(TokenType.COMMA);
                 break;
             case '.':
-                this.addToken(TokenType.Dot);
+                this.addToken(TokenType.DOT);
                 break;
             case '-':
-                this.addToken(TokenType.Minus);
+                this.addToken(TokenType.MINUS);
                 break;
             case '+':
-                this.addToken(TokenType.Plus);
+                this.addToken(TokenType.PLUS);
                 break;
             case ';':
-                this.addToken(TokenType.Semicolon);
+                this.addToken(TokenType.SEMICOLON);
                 break;
             case '*':
-                this.addToken(TokenType.Star);
+                this.addToken(TokenType.STAR);
                 break;
             case ',':
-                this.addToken(TokenType.Comma);
+                this.addToken(TokenType.COMMA);
                 break;
             case '!':
-                this.addToken(this.match('=') ? TokenType.BangEqual : TokenType.Bang);
+                this.addToken(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
                 break;
             case '=':
-                this.addToken(this.match('=') ? TokenType.EqualEqual : TokenType.Equal);
+                this.addToken(this.match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
                 break;
             case '<':
-                this.addToken(this.match('=') ? TokenType.LessEqual : TokenType.Less);
+                this.addToken(this.match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
                 break;
             case '>':
                 this.addToken(
-                    this.match('=') ? TokenType.GreaterEqual : TokenType.Greater
+                    this.match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER
                 );
                 break;
             case '/':
@@ -114,7 +117,7 @@ export default class Lexer {
                 } else if (this.match('*')) {
                     this.blockComment();
                 } else {
-                    this.addToken(TokenType.Slash);
+                    this.addToken(TokenType.SLASH);
                 }
                 break;
             case ' ':
@@ -137,7 +140,7 @@ export default class Lexer {
                 } else if (isAlphabetic(char)) {
                     this.identifier();
                 } else {
-                    this.error(
+                    this.powerScript.lexingError(
                         this.line,
                         `Unexpected character: ${JSON.stringify(char)}`
                     );
@@ -153,7 +156,7 @@ export default class Lexer {
 
         // Unterminated string
         if (this.isAtEnd()) {
-            this.error(this.line, 'Unterminated block comment');
+            this.powerScript.lexingError(this.line, 'Unterminated block comment');
             return;
         }
     }
@@ -188,7 +191,7 @@ export default class Lexer {
 
         // Unterminated string
         if (this.isAtEnd()) {
-            this.error(this.line, 'Unterminated string');
+            this.powerScript.lexingError(this.line, 'Unterminated string');
             return;
         }
 
@@ -197,7 +200,7 @@ export default class Lexer {
 
         // Trim the surrounding quotes
         const value: string = this.source.substring(this.start + 1, this.current - 1);
-        this.addToken(TokenType.String, value);
+        this.addToken(TokenType.STRING, value);
     }
 
     number(): void {
@@ -212,7 +215,7 @@ export default class Lexer {
         }
 
         this.addToken(
-            TokenType.Number,
+            TokenType.NUMBER,
             parseFloat(this.source.substring(this.start, this.current))
         );
     }
@@ -226,7 +229,7 @@ export default class Lexer {
         while (isAlphanumeric(this.peek())) this.advance();
 
         const text: string = this.source.substring(this.start, this.current);
-        this.addToken(keywords.get(text) || TokenType.Identifier);
+        this.addToken(keywords.get(text) || TokenType.IDENTIFIER);
     }
 }
 

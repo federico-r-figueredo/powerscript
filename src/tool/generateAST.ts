@@ -18,15 +18,19 @@ function main(args: string[]): void {
     const outputDirectory = args[0];
 
     defineAST(outputDirectory, 'Expression', [
-        'Binary   : Expression left, Token operator, Expression right',
-        'Grouping : Expression expression',
-        'Literal  : LiteralValue value',
-        'Unary    : Token operator, Expression right'
+        'Assignment : Token name, Expression value',
+        'Binary     : Expression left, Token operator, Expression right',
+        'Grouping   : Expression expression',
+        'Literal    : LiteralValue value',
+        'Unary      : Token operator, Expression right',
+        'Variable   : Token name'
     ]);
 
     defineAST(outputDirectory, 'Statement', [
         'Expression : Expression expression',
-        'Print      : Expression expression'
+        'Print      : Expression expression',
+        'Variable   : Token name, Expression initializer',
+        'Block      : Statement[] statements'
     ]);
 }
 

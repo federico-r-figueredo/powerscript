@@ -1,41 +1,62 @@
+import LiteralValue from './LiteralValue';
+import TokenType from './TokenType';
+import Token from './Token';
+import RuntimeError from './RuntimeError';
+import PowerScript from './PowerScript';
 import {
     Expression,
     BinaryExpression,
     GroupingExpression,
     LiteralExpression,
     UnaryExpression,
-    ExpressionVisitor
+    ExpressionVisitor,
+    VariableExpression,
+    AssignmentExpression
 } from './Expression';
-import LiteralValue from './LiteralValue';
-import TokenType from './TokenType';
-import Token from './Token';
-import RuntimeError from './RuntimeError';
+import {
+    Statement,
+    StatementVisitor,
+    ExpressionStatement,
+    PrintStatement,
+    VariableStatement,
+    BlockStatement
+} from './Statement';
+import Environment from './Environment';
 
-export default class Interpreter implements ExpressionVisitor<LiteralValue> {
-    private readonly runtimeError: (error: RuntimeError) => void;
+export default class Interpreter
+    implements ExpressionVisitor<LiteralValue>, StatementVisitor<void>
+{
+    private readonly powerScript: PowerScript;
+    private environment: Environment = new Environment();
 
-    constructor(runtimeError: (error: RuntimeError) => void) {
-        this.runtimeError = runtimeError;
+    constructor(powerScript: PowerScript) {
+        this.powerScript = powerScript;
     }
 
-    public interpret(expression: Expression) {
+    interpret(statements: Statement[]) {
         try {
-            const value = this.evaluate(expression);
-            console.log(this.stringify(value));
+            for (const statement of statements) {
+                this.execute(statement);
+            }
         } catch (error) {
             if (error instanceof RuntimeError) {
-                this.runtimeError(error);
+                this.powerScript.runtimeError(error);
             } else throw error;
         }
     }
 
-    private evaluate(expression: Expression): LiteralValue {
+    execute(statement: Statement) {
+        statement.accept(this);
+    }
+
+    evaluate(expression: Expression): LiteralValue {
         return expression.accept(this);
     }
 
-    private stringify(object: LiteralValue): any {
-        if (object === 'null') return null;
-        return String(object);
+    visitAssignmentExpression(expression: AssignmentExpression): LiteralValue {
+        const value = this.evaluate(expression.value);
+        this.environment.assign(expression.name, value);
+        return value;
     }
 
     visitLiteralExpression(expression: LiteralExpression): LiteralValue {
@@ -51,9 +72,9 @@ export default class Interpreter implements ExpressionVisitor<LiteralValue> {
 
         // TODO: Add specific UnaryOperator type to detect totality
         switch (expression.operator.type) {
-            case TokenType.Bang:
+            case TokenType.BANG:
                 return !this.isTruthy(right);
-            case TokenType.Minus:
+            case TokenType.MINUS:
                 this.checkNumberOperand(expression.operator, right);
                 return -(right as number);
         }
@@ -67,7 +88,7 @@ export default class Interpreter implements ExpressionVisitor<LiteralValue> {
         const right = this.evaluate(expression.right);
 
         switch (expression.operator.type) {
-            case TokenType.Plus:
+            case TokenType.PLUS:
                 if (typeof left === 'number' && typeof right === 'number') {
                     return left + right;
                 }
@@ -82,35 +103,66 @@ export default class Interpreter implements ExpressionVisitor<LiteralValue> {
                 );
 
                 break;
-            case TokenType.Minus:
+            case TokenType.MINUS:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) - (right as number);
-
-            case TokenType.Slash:
+            case TokenType.SLASH:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) / (right as number);
-            case TokenType.Star:
+            case TokenType.STAR:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) * (right as number);
-            case TokenType.Greater:
+            case TokenType.GREATER:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) > (right as number);
-            case TokenType.GreaterEqual:
+            case TokenType.GREATER_EQUAL:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) >= (right as number);
-            case TokenType.Less:
+            case TokenType.LESS:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) < (right as number);
-            case TokenType.LessEqual:
+            case TokenType.LESS_EQUAL:
                 this.checkNumberOperands(expression.operator, left, right);
                 return (left as number) <= (right as number);
-            case TokenType.EqualEqual:
+            case TokenType.EQUAL_EQUAL:
                 return this.isEqual(left, right);
-            case TokenType.BangEqual:
+            case TokenType.BANG_EQUAL:
                 return !this.isEqual(left, right);
         }
 
         throw new Error(`Unexpected binary operation: ${expression.operator.lexeme}`);
+    }
+
+    visitVariableExpression(expression: VariableExpression): LiteralValue {
+        return this.environment.get(expression.name);
+    }
+
+    visitBlockStatement(statement: BlockStatement): void {
+        const outerEnvironment = this.environment;
+
+        try {
+            this.environment = new Environment(outerEnvironment);
+
+            for (const nestedStatement of statement.statements) {
+                this.execute(nestedStatement);
+            }
+        } finally {
+            this.environment = outerEnvironment;
+        }
+    }
+
+    visitExpressionStatement(statement: ExpressionStatement): void {
+        this.evaluate(statement.expression);
+    }
+
+    visitPrintStatement(statement: PrintStatement): void {
+        const value = this.evaluate(statement.expression);
+        this.powerScript.print(this.stringify(value));
+    }
+
+    visitVariableStatement(statement: VariableStatement): void {
+        const value = statement.initializer ? this.evaluate(statement.initializer) : null;
+        this.environment.define(statement.name.lexeme, value);
     }
 
     private isEqual(left: LiteralValue, right: LiteralValue): boolean {
@@ -133,5 +185,10 @@ export default class Interpreter implements ExpressionVisitor<LiteralValue> {
     ): void {
         if (typeof left === 'number' && typeof right === 'number') return;
         throw new RuntimeError(operator, 'Operator must be a number');
+    }
+
+    private stringify(object: LiteralValue): any {
+        if (object === 'null') return null;
+        return String(object);
     }
 }

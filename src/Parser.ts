@@ -6,27 +6,53 @@ import {
     BinaryExpression,
     GroupingExpression,
     LiteralExpression,
-    UnaryExpression
+    UnaryExpression,
+    VariableExpression,
+    AssignmentExpression
 } from './Expression';
+import {
+    Statement,
+    StatementVisitor,
+    ExpressionStatement,
+    PrintStatement,
+    VariableStatement,
+    BlockStatement
+} from './Statement';
+import PowerScript from './PowerScript';
 
 class ParseError extends Error {}
 
 export default class Parser {
-    private current: number;
+    private readonly powerScript: PowerScript;
     private readonly tokens: Token[];
-    private readonly error: ErrorHandler;
 
-    constructor(tokens: Token[], error: ErrorHandler) {
-        this.current = 0;
+    private current: number;
+
+    constructor(powerScript: PowerScript, tokens: Token[]) {
+        this.powerScript = powerScript;
         this.tokens = tokens;
-        this.error = error;
+
+        this.current = 0;
     }
 
-    public parse(): Expression | null {
+    public parse(): Statement[] {
+        const statements: Statement[] = [];
+        while (!this.isAtEnd()) {
+            const declaration = this.declaration();
+            if (declaration !== null) statements.push(declaration);
+        }
+
+        return statements;
+    }
+
+    private declaration(): Statement | null {
         try {
-            return this.expression();
+            if (this.match(TokenType.LET)) return this.variableDeclaration();
+
+            return this.statement();
         } catch (error) {
             if (error instanceof ParseError) {
+                this.synchronize();
                 return null;
             }
 
@@ -34,14 +60,76 @@ export default class Parser {
         }
     }
 
+    private variableDeclaration(): Statement {
+        const name = this.consume(TokenType.IDENTIFIER, 'Expect variable identifier');
+
+        const initializer = this.match(TokenType.EQUAL)
+            ? this.expression()
+            : new LiteralExpression(null);
+
+        this.consume(TokenType.SEMICOLON, "Expect '; after variable declaration");
+
+        return new VariableStatement(name, initializer);
+    }
+
+    private statement(): Statement {
+        if (this.match(TokenType.PRINT)) return this.printStatement();
+        if (this.match(TokenType.LEFT_BRACE)) return this.blockStatement();
+
+        return this.expressionStatement();
+    }
+
+    private printStatement(): Statement {
+        const expression = this.expression();
+        this.consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        return new PrintStatement(expression);
+    }
+
+    private blockStatement(): Statement {
+        const statements: Statement[] = [];
+        while (!this.check(TokenType.RIGHT_BRACE) && !this.isAtEnd()) {
+            const declaration = this.declaration();
+            if (declaration) statements.push(declaration);
+        }
+
+        this.consume(TokenType.RIGHT_BRACE, "Expect '}' after block");
+
+        return new BlockStatement(statements);
+    }
+
+    private expressionStatement(): Statement {
+        const expression = this.expression();
+        this.consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+        return new ExpressionStatement(expression);
+    }
+
     private expression(): Expression {
-        return this.equality();
+        return this.assignment();
+    }
+
+    private assignment(): Expression {
+        const expression = this.equality();
+
+        if (this.match(TokenType.EQUAL)) {
+            const equals = this.previous();
+            const value = this.equality();
+
+            if (expression instanceof VariableExpression) {
+                return new AssignmentExpression(expression.name, value);
+            }
+
+            // Report a parse error, but don't throw it, as we don't
+            // need to synchronize
+            this.parseError(equals, `Invalid assignment target`);
+        }
+
+        return expression;
     }
 
     private equality(): Expression {
         let left: Expression = this.comparison();
 
-        while (this.match(TokenType.BangEqual, TokenType.EqualEqual)) {
+        while (this.match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)) {
             const operator: Token = this.previous();
             const right: Expression = this.comparison();
             left = new BinaryExpression(left, operator, right);
@@ -55,10 +143,10 @@ export default class Parser {
 
         while (
             this.match(
-                TokenType.Greater,
-                TokenType.GreaterEqual,
-                TokenType.Less,
-                TokenType.LessEqual
+                TokenType.GREATER,
+                TokenType.GREATER_EQUAL,
+                TokenType.LESS,
+                TokenType.LESS_EQUAL
             )
         ) {
             const operator = this.previous();
@@ -72,7 +160,7 @@ export default class Parser {
     private addition(): Expression {
         let left: Expression = this.multiplication();
 
-        while (this.match(TokenType.Plus, TokenType.Minus)) {
+        while (this.match(TokenType.PLUS, TokenType.MINUS)) {
             const operator = this.previous();
             const right = this.multiplication();
             left = new BinaryExpression(left, operator, right);
@@ -84,7 +172,7 @@ export default class Parser {
     private multiplication(): Expression {
         let left: Expression = this.unary();
 
-        while (this.match(TokenType.Slash, TokenType.Star)) {
+        while (this.match(TokenType.SLASH, TokenType.STAR)) {
             const operator = this.previous();
             const right = this.unary();
             left = new BinaryExpression(left, operator, right);
@@ -94,7 +182,7 @@ export default class Parser {
     }
 
     private unary(): Expression {
-        if (this.match(TokenType.Bang, TokenType.Minus)) {
+        if (this.match(TokenType.BANG, TokenType.MINUS)) {
             const operator = this.previous();
             const right = this.unary();
             return new UnaryExpression(operator, right);
@@ -104,17 +192,21 @@ export default class Parser {
     }
 
     private primary(): Expression {
-        if (this.match(TokenType.False)) return new LiteralExpression(false);
-        if (this.match(TokenType.True)) return new LiteralExpression(true);
-        if (this.match(TokenType.Null)) return new LiteralExpression(null);
+        if (this.match(TokenType.FALSE)) return new LiteralExpression(false);
+        if (this.match(TokenType.TRUE)) return new LiteralExpression(true);
+        if (this.match(TokenType.NULL)) return new LiteralExpression(null);
 
-        if (this.match(TokenType.Number, TokenType.String)) {
+        if (this.match(TokenType.NUMBER, TokenType.STRING)) {
             return new LiteralExpression(this.previous().literal);
         }
 
-        if (this.match(TokenType.LeftParenthesis)) {
+        if (this.match(TokenType.IDENTIFIER)) {
+            return new VariableExpression(this.previous());
+        }
+
+        if (this.match(TokenType.LEFT_PARENTHESIS)) {
             const expression = this.expression();
-            this.consume(TokenType.RightParenthesis, "Expect ')' after expression");
+            this.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after expression");
             return new GroupingExpression(expression);
         }
 
@@ -128,7 +220,7 @@ export default class Parser {
     }
 
     private parseError(token: Token, message: string): ParseError {
-        this.error(token, message);
+        this.powerScript.parsingError(token, message);
         return new ParseError();
     }
 
@@ -136,16 +228,16 @@ export default class Parser {
         this.advance();
 
         while (!this.isAtEnd()) {
-            if (this.previous().type === TokenType.Semicolon) return;
+            if (this.previous().type === TokenType.SEMICOLON) return;
 
             switch (this.peek().type) {
-                case TokenType.Class:
-                case TokenType.Function:
-                case TokenType.Let:
-                case TokenType.For:
-                case TokenType.If:
-                case TokenType.While:
-                case TokenType.Return:
+                case TokenType.CLASS:
+                case TokenType.FUNCTION:
+                case TokenType.LET:
+                case TokenType.FOR:
+                case TokenType.IF:
+                case TokenType.WHILE:
+                case TokenType.RETURN:
                     return;
             }
 

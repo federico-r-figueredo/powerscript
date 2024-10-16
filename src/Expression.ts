@@ -10,10 +10,38 @@ export abstract class Expression {
 export default Expression
 
 export interface ExpressionVisitor<T> {
+    visitAssignmentExpression(expression: AssignmentExpression): T;
     visitBinaryExpression(expression: BinaryExpression): T;
     visitGroupingExpression(expression: GroupingExpression): T;
     visitLiteralExpression(expression: LiteralExpression): T;
     visitUnaryExpression(expression: UnaryExpression): T;
+    visitVariableExpression(expression: VariableExpression): T;
+}
+
+export class AssignmentExpression extends Expression {
+    private readonly _name: Token;
+    private readonly _value: Expression;
+
+    constructor(
+        name: Token,
+        value: Expression,
+    ) {
+        super();
+        this._name = name
+        this._value = value
+    }
+
+    public get name(): Token {
+        return this._name;
+    }
+
+    public get value(): Expression {
+        return this._value;
+    }
+
+    accept<T>(visitor: ExpressionVisitor<T>): T {
+        return visitor.visitAssignmentExpression(this);
+    }
 }
 
 export class BinaryExpression extends Expression {
@@ -110,5 +138,24 @@ export class UnaryExpression extends Expression {
 
     accept<T>(visitor: ExpressionVisitor<T>): T {
         return visitor.visitUnaryExpression(this);
+    }
+}
+
+export class VariableExpression extends Expression {
+    private readonly _name: Token;
+
+    constructor(
+        name: Token,
+    ) {
+        super();
+        this._name = name
+    }
+
+    public get name(): Token {
+        return this._name;
+    }
+
+    accept<T>(visitor: ExpressionVisitor<T>): T {
+        return visitor.visitVariableExpression(this);
     }
 }

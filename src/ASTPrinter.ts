@@ -4,13 +4,19 @@ import {
     GroupingExpression,
     LiteralExpression,
     UnaryExpression,
-    ExpressionVisitor
+    ExpressionVisitor,
+    VariableExpression,
+    AssignmentExpression
 } from './Expression';
 
 // Creates an unambiguous, if ugly, string representation of AST nodes
 export default class ASTPrinter implements ExpressionVisitor<string> {
     print(expression: Expression): string {
         return expression.accept(this);
+    }
+
+    visitAssignmentExpression(expression: AssignmentExpression): string {
+        return this.parenthesize('=', expression.name.lexeme, expression.value);
     }
 
     visitBinaryExpression(expression: BinaryExpression): string {
@@ -34,10 +40,14 @@ export default class ASTPrinter implements ExpressionVisitor<string> {
         return this.parenthesize(expression.operator.lexeme, expression.right);
     }
 
-    private parenthesize(name: string, ...expressions: Expression[]): string {
-        const expressionStrings = expressions.map((expression) =>
-            expression.accept(this)
+    visitVariableExpression(expression: VariableExpression): string {
+        return expression.name.lexeme;
+    }
+
+    private parenthesize(name: string, ...args: (Expression | string)[]): string {
+        const argumentStrings = args.map((argument) =>
+            argument instanceof Expression ? argument.accept(this) : argument
         );
-        return `(${name} ${expressionStrings.join(' ')})`;
+        return `(${name} ${argumentStrings.join(' ')})`;
     }
 }
