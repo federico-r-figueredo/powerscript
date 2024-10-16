@@ -43,7 +43,7 @@ function defineAST(outputDirectory: string, baseName: string, types: string[]): 
         classDefinitions
             .flatMap(({ fields }) => fields)
             .map(({ type }) => type)
-            .filter((type) => type !== baseName)
+            .filter((type) => type !== baseName && !type.endsWith('[]'))
     );
 
     const lines = [

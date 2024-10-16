@@ -7,13 +7,13 @@ import Lexer from './Lexer';
 import Parser from './Parser';
 import Interpreter from './Interpreter';
 import RuntimeError from './RuntimeError';
-import Statement from './Statement';
+import Statement, { ExpressionStatement, PrintStatement } from './Statement';
 
 export default class PowerScript {
+    private readonly interpreter = new Interpreter(this);
+
     private hadError: boolean = false;
     private hadRuntimeError: boolean = false;
-
-    private readonly interpreter = new Interpreter(this);
 
     public runFile(path: string): void {
         this.run(fs.readFileSync(path, { encoding: 'utf8' }));
@@ -32,7 +32,7 @@ export default class PowerScript {
 
         const nextLine = (): void => {
             stdinInterface.question('> ', (line) => {
-                this.run(line);
+                this.run(line, true);
                 this.hadError = false;
                 nextLine();
             });
@@ -41,14 +41,23 @@ export default class PowerScript {
         nextLine();
     }
 
-    public run(source: string): void {
+    public run(source: string, isREPL: boolean = false): void {
         const lexer: Lexer = new Lexer(this, source);
         const tokens: Token[] = lexer.scanTokens();
 
         const parser: Parser = new Parser(this, tokens);
         const statements: Statement[] | null = parser.parse();
 
-        if (statements) this.interpreter.interpret(statements);
+        if (statements) {
+            const lastStatement: Statement = statements[statements.length - 1];
+            if (isREPL && lastStatement instanceof ExpressionStatement) {
+                statements[statements.length - 1] = new PrintStatement(
+                    lastStatement.expression
+                );
+            }
+
+            this.interpreter.interpret(statements);
+        }
     }
 
     public lexingError(location: number | Token, message: string): void {
