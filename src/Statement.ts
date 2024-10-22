@@ -14,6 +14,7 @@ export interface StatementVisitor<T> {
     visitPrintStatement(statement: PrintStatement): T;
     visitVariableStatement(statement: VariableStatement): T;
     visitBlockStatement(statement: BlockStatement): T;
+    visitIfStatement(statement: IfStatement): T;
 }
 
 export class ExpressionStatement extends Statement {
@@ -96,5 +97,38 @@ export class BlockStatement extends Statement {
 
     accept<T>(visitor: StatementVisitor<T>): T {
         return visitor.visitBlockStatement(this);
+    }
+}
+
+export class IfStatement extends Statement {
+    private readonly _condition: Expression;
+    private readonly _thenBranch: Statement[];
+    private readonly _elseBranch: Statement[];
+
+    constructor(
+        condition: Expression,
+        thenBranch: Statement[],
+        elseBranch: Statement[],
+    ) {
+        super();
+        this._condition = condition
+        this._thenBranch = thenBranch
+        this._elseBranch = elseBranch
+    }
+
+    public get condition(): Expression {
+        return this._condition;
+    }
+
+    public get thenBranch(): Statement[] {
+        return this._thenBranch;
+    }
+
+    public get elseBranch(): Statement[] {
+        return this._elseBranch;
+    }
+
+    accept<T>(visitor: StatementVisitor<T>): T {
+        return visitor.visitIfStatement(this);
     }
 }

@@ -5,7 +5,7 @@
     "main": "index.js",
     "scripts": {
         "build": "tsc",
-        "start": "npm run-script build && node ./build/main.js",
+        "start": "npm run-script build && node ./build/main.js ./main.ps",
         "test": "npm run-script build && jest --verbose",
         "test-with-coverage": "npm run-script build && jest --verbose --coverage",
         "generate-ast": "tsc && node ./build/tool/generateAST.js ./src/"

@@ -19,7 +19,8 @@ import {
     ExpressionStatement,
     PrintStatement,
     VariableStatement,
-    BlockStatement
+    BlockStatement,
+    IfStatement
 } from './Statement';
 import Environment from './Environment';
 
@@ -153,6 +154,18 @@ export default class Interpreter
 
     visitExpressionStatement(statement: ExpressionStatement): void {
         this.evaluate(statement.expression);
+    }
+
+    visitIfStatement(statement: IfStatement): void {
+        if (this.isTruthy(this.evaluate(statement.condition))) {
+            for (const thenBranchStatement of statement.thenBranch) {
+                this.execute(thenBranchStatement);
+            }
+        } else if (statement.elseBranch.length > 0) {
+            for (const elseBranchStatement of statement.elseBranch) {
+                this.execute(elseBranchStatement);
+            }
+        }
     }
 
     visitPrintStatement(statement: PrintStatement): void {

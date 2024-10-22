@@ -1,4 +1,3 @@
-import ErrorHandler from './ErrorHandler';
 import Token from './Token';
 import TokenType from './TokenType';
 import {
@@ -16,7 +15,8 @@ import {
     ExpressionStatement,
     PrintStatement,
     VariableStatement,
-    BlockStatement
+    BlockStatement,
+    IfStatement
 } from './Statement';
 import PowerScript from './PowerScript';
 
@@ -75,6 +75,7 @@ export default class Parser {
     private statement(): Statement {
         if (this.match(TokenType.PRINT)) return this.printStatement();
         if (this.match(TokenType.LEFT_BRACE)) return this.blockStatement();
+        if (this.match(TokenType.IF)) return this.ifStatement();
 
         return this.expressionStatement();
     }
@@ -95,6 +96,48 @@ export default class Parser {
         this.consume(TokenType.RIGHT_BRACE, "Expect '}' after block");
 
         return new BlockStatement(statements);
+    }
+
+    private ifStatement() {
+        this.consume(TokenType.LEFT_PARENTHESIS, "Expect '(' after if");
+        const condition = this.expression();
+        this.consume(TokenType.RIGHT_PARENTHESIS, "Expect ')' after if condition");
+
+        const thenBranch: Statement[] = [];
+        if (this.check(TokenType.LEFT_BRACE)) {
+            this.advance();
+            while (!this.check(TokenType.RIGHT_BRACE) && !this.isAtEnd()) {
+                const statement: Statement | null = this.declaration();
+                if (statement) thenBranch.push(statement);
+            }
+
+            this.consume(TokenType.RIGHT_BRACE, "Expect '}' after conditional's body");
+        } else {
+            const statement: Statement | null = this.declaration();
+            if (statement) thenBranch.push(statement);
+        }
+
+        const elseBranch: Statement[] = [];
+        if (this.check(TokenType.ELSE)) {
+            this.advance();
+            if (this.check(TokenType.LEFT_BRACE)) {
+                this.advance();
+                while (!this.check(TokenType.RIGHT_BRACE) && !this.isAtEnd()) {
+                    const statement: Statement | null = this.declaration();
+                    if (statement) elseBranch.push(statement);
+                }
+
+                this.consume(
+                    TokenType.RIGHT_BRACE,
+                    "Expect '}' after conditional's body"
+                );
+            } else {
+                const statement: Statement | null = this.declaration();
+                if (statement) elseBranch.push(statement);
+            }
+        }
+
+        return new IfStatement(condition, thenBranch, elseBranch);
     }
 
     private expressionStatement(): Statement {
@@ -258,7 +301,9 @@ export default class Parser {
 
     private check(type: TokenType): boolean {
         if (this.isAtEnd()) return false;
-        return this.peek().type === type;
+        const currentTokenType = this.peek().type;
+        const comparison = currentTokenType === type;
+        return comparison;
     }
 
     private advance(): Token {

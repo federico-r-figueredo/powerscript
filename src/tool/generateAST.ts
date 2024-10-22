@@ -30,7 +30,8 @@ function main(args: string[]): void {
         'Expression : Expression expression',
         'Print      : Expression expression',
         'Variable   : Token name, Expression initializer',
-        'Block      : Statement[] statements'
+        'Block      : Statement[] statements',
+        'If         : Expression condition, Statement[] thenBranch, Statement[] elseBranch'
     ]);
 }
 
