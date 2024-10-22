@@ -129,6 +129,10 @@ export default class Interpreter
                 return this.isEqual(left, right);
             case TokenType.BANG_EQUAL:
                 return !this.isEqual(left, right);
+            case TokenType.LOGICAL_AND:
+                return this.isTruthy(left) && this.isTruthy(right);
+            case TokenType.LOGICAL_OR:
+                return this.isTruthy(left) || this.isTruthy(right);
         }
 
         throw new Error(`Unexpected binary operation: ${expression.operator.lexeme}`);
@@ -182,8 +186,15 @@ export default class Interpreter
         return left === right;
     }
 
-    private isTruthy(object: string | number | boolean | null) {
-        return object !== null && object !== false;
+    private isTruthy(object: string | number | boolean | null | [] | {}) {
+        return (
+            object !== null &&
+            object !== false &&
+            object !== 0 &&
+            object !== '' &&
+            (object instanceof Array && object.length == 0 ? false : true) &&
+            (object instanceof Object && Object.keys(object).length === 0 ? false : true)
+        );
     }
 
     private checkNumberOperand(operator: Token, operand: LiteralValue): void {

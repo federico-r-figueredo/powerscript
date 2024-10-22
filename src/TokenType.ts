@@ -11,6 +11,8 @@ enum TokenType {
     SEMICOLON = 'SEMICOLON',
     SLASH = 'SLASH',
     STAR = 'STAR',
+    BITWISE_AND = 'BITWISE_AND',
+    BITWISE_OR = 'BITWISE_OR',
 
     // One or two character tokens.
     BANG = 'BANG',
@@ -28,7 +30,7 @@ enum TokenType {
     NUMBER = 'NUMBER',
 
     // Keywords
-    AND = 'AND',
+    LOGICAL_AND = 'AND',
     CLASS = 'CLASS',
     CONST = 'CONST',
     ELSE = 'ELSE',
@@ -37,7 +39,7 @@ enum TokenType {
     FOR = 'FOR',
     IF = 'IF',
     NULL = 'NULL',
-    OR = 'OR',
+    LOGICAL_OR = 'OR',
     PRINT = 'PRINT',
     RETURN = 'RETURN',
     SUPER = 'SUPER',

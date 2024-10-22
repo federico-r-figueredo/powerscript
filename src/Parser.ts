@@ -151,11 +151,11 @@ export default class Parser {
     }
 
     private assignment(): Expression {
-        const expression = this.equality();
+        const expression = this.logicalDisjunction();
 
         if (this.match(TokenType.EQUAL)) {
             const equals = this.previous();
-            const value = this.equality();
+            const value = this.logicalDisjunction();
 
             if (expression instanceof VariableExpression) {
                 return new AssignmentExpression(expression.name, value);
@@ -167,6 +167,30 @@ export default class Parser {
         }
 
         return expression;
+    }
+
+    private logicalDisjunction() {
+        let left: Expression = this.logicalConjunction();
+
+        while (this.match(TokenType.LOGICAL_OR)) {
+            const operator = this.previous();
+            const right = this.logicalConjunction();
+            left = new BinaryExpression(left, operator, right);
+        }
+
+        return left;
+    }
+
+    private logicalConjunction() {
+        let left: Expression = this.equality();
+
+        while (this.match(TokenType.LOGICAL_AND)) {
+            const operator = this.previous();
+            const right = this.equality();
+            left = new BinaryExpression(left, operator, right);
+        }
+
+        return left;
     }
 
     private equality(): Expression {

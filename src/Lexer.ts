@@ -5,7 +5,7 @@ import LiteralValue from './LiteralValue';
 import PowerScript from './PowerScript';
 
 const keywords = new Map([
-    ['and', TokenType.AND],
+    ['and', TokenType.LOGICAL_AND],
     ['class', TokenType.CLASS],
     ['const', TokenType.CONST],
     ['else', TokenType.ELSE],
@@ -14,7 +14,7 @@ const keywords = new Map([
     ['function', TokenType.FUNCTION],
     ['if', TokenType.IF],
     ['null', TokenType.NULL],
-    ['or', TokenType.OR],
+    ['or', TokenType.LOGICAL_OR],
     ['print', TokenType.PRINT],
     ['return', TokenType.RETURN],
     ['super', TokenType.SUPER],
@@ -107,6 +107,20 @@ export default class Lexer {
                 this.addToken(
                     this.match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER
                 );
+                break;
+            case '&':
+                if (this.match('&')) {
+                    this.addToken(TokenType.LOGICAL_AND);
+                } else {
+                    this.addToken(TokenType.BITWISE_AND);
+                }
+                break;
+            case '|':
+                if (this.match('|')) {
+                    this.addToken(TokenType.LOGICAL_OR);
+                } else {
+                    this.addToken(TokenType.BITWISE_OR);
+                }
                 break;
             case '/':
                 if (this.match('/')) {
